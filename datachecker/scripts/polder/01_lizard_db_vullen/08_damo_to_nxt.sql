@@ -1586,7 +1586,6 @@ SELECT
             ELSE breedte
     END
   , 10
-  , shape_length
   , case
         when soortmateriaal is null
             then 9999 -- leeg veld wordt leeg veld
