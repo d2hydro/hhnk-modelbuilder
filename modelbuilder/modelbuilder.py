@@ -157,6 +157,7 @@ def modelbuilder(**kwargs):
                         file_path = root+'/'+f
                         logging.debug('Opening file: {}'.format(file_path))
                         result = ""
+                        print(file_path)
                         execute_file(file_path, polder_id, polder_name)
             except psycopg2.Error as e:
                 logging.error(e)

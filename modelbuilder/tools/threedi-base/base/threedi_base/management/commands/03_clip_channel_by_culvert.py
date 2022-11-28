@@ -73,6 +73,7 @@ class Command(ThreediBaseCommand):
     def run_command(self, **options):
         status = 'error'
         msg = ''
+        print(options)
         ccl = CulvertChannelLines(
             self.db, buffer_size=options['buffer_size'],
             culvert_input_table=options['culvert_input_table'],
@@ -80,6 +81,13 @@ class Command(ThreediBaseCommand):
             culvert_output_table_name=options['culvert_output_table'],
             channel_output_table_name=options['channel_output_table']
         )
+        
+        ccl.analyze_dataset()
+        ccl.create_tmp_culverts()
+        ccl.clip_channels_by_culverts()
+        ccl.move_multi_geoms_to_misfits()
+        ccl.add_missing_culverts_to_misfits()
+
         try:
             ccl.analyze_dataset()
             ccl.create_tmp_culverts()

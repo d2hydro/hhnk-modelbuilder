@@ -101,6 +101,7 @@ class ThreediDatabase(object):
                 schema=self.schema, table_name=table_name,
                 field_names=field_names, template=records_list_template
             )
+            print(insert_query, data)
             cur.execute(insert_query, data)
             self.db.commit()
 

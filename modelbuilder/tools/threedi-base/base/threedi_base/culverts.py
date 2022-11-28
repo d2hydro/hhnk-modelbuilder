@@ -299,6 +299,7 @@ class CulvertChannelLines:
             self.corrected_valids_table_name, field_names.split(','),
             ['bigint', 'bigint', 'double precision', 'double precision']
         )
+        
         self.db.commit_values(
             self.corrected_valids_table_name, field_names, corrected_entries
         )
