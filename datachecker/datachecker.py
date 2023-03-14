@@ -6,9 +6,10 @@ Python script reading sql and bash files in order to automatically execute datac
 
 #import libraries
 import os
-import sys
 import subprocess
 import argparse
+
+from pathlib import Path
 
 import sqlparse
 import psycopg2
@@ -18,15 +19,19 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import logging
 import configparser
 
+# set the work-dir so code-dir can be found
+if not Path("code").absolute().resolve().exists():
+    os.chdir(Path(__file__).absolute().resolve().parents[2])
+
+work_dir = Path.cwd()         
 #setup logging to write debug log to file
-logging.basicConfig(filename='/code/datachecker/datachecker.log',filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=logging.DEBUG)
+logging.basicConfig(filename=work_dir.joinpath('code/datachecker/datachecker.log'),filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=logging.DEBUG)
 
 #Read configuration file
 config = configparser.ConfigParser()
-config.read('/code/datachecker/datachecker_config.ini')
+config.read(work_dir.joinpath('code/datachecker/datachecker_config.ini'))
 
-walk_dir = '/code/datachecker/scripts/polder/'
-
+walk_dir = work_dir.joinpath('code/datachecker/scripts/polder')
 
 def get_parser():
     """ Return argument parser. """
@@ -105,7 +110,11 @@ def create_database(db_name):
     )
     
     #Fill with 3di template
-    result = execute_sql_file_multiple_transactions('/code/datachecker/tools/threedi-template/work_empty_schema_2020-01-15.sql')
+    result = execute_sql_file_multiple_transactions(
+        work_dir.joinpath(
+            'code/datachecker/tools/threedi-template/work_empty_schema_2020-01-15.sql'
+            )
+        )
 
 def datachecker(**kwargs):
 
