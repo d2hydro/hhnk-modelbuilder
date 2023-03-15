@@ -33,6 +33,8 @@ config.read(work_dir.joinpath('code/datachecker/datachecker_config.ini'))
 
 walk_dir = work_dir.joinpath('code/datachecker/scripts/polder')
 
+windows = True
+
 def get_parser():
     """ Return argument parser. """
 
@@ -93,7 +95,15 @@ def execute_bash_file(file_path):
     file_name = file_path.split('/')[-1]
     f = open("/code/datachecker/logging_" + file_name + ".log", "w")
     subprocess.call(['bash',file_path])
-    
+
+#Define function for executing cmd files        
+def execute_cmd_file(file_path):
+    logging.info("START execute cmd file: {}".format(file_path))
+    file_path = Path(file_path)
+    cmd = file_path.as_posix()
+    log_file = work_dir.joinpath(f"code/datachecker/logging_{file_path.stem}.log")
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    log_file.write_text(p)
 
 def create_database(db_name):
     logging.info("Creating database {}".format(db_name))
@@ -136,11 +146,13 @@ def datachecker(**kwargs):
                         logging.debug('Executing .sql file')
 
                         result = execute_sql_file_multiple_transactions(file_path)
-                    elif file_path.endswith('.sh'):
+                    elif file_path.endswith('.sh') and not windows:
                         logging.debug('Executing .sh file')
 
                         result = execute_bash_file(file_path)
-                    
+                    elif file_path.endswith('.cmd') and windows:
+                        logging.debug('Executing .cmd file')
+                        result = execute_cmd_file(file_path)
                     else:
                         logging.debug("File is no .sql or .sh file, don't know what to do with it, skipping")
         except psycopg2.Error as e:
