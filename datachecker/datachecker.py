@@ -33,6 +33,7 @@ config.read(work_dir.joinpath('code/datachecker/datachecker_config.ini'))
 
 walk_dir = work_dir.joinpath('code/datachecker/scripts/polder')
 
+
 windows = True
 
 def get_parser():

@@ -9,7 +9,7 @@ import os
 import sys
 import subprocess
 import argparse
-
+from pathlib import Path
 import sqlparse
 import psycopg2
 from psycopg2 import sql
@@ -18,15 +18,22 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import logging
 import configparser
 
+# set the work-dir so code-dir can be found
+if not Path("code").absolute().resolve().exists():
+    os.chdir(Path(__file__).absolute().resolve().parents[2])
+
+work_dir = Path.cwd() 
+
 #setup logging to write debug log to file
-logging.basicConfig(filename='/code/modelbuilder/modelbuilder.log',filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=logging.DEBUG)
+logging.basicConfig(filename=work_dir.joinpath('code/modelbuilder/modelbuilder.log'),filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=logging.DEBUG)
 
 #Read configuration file
 config = configparser.ConfigParser()
-config.read('/code/modelbuilder/modelbuilder_config.ini')
+config.read(work_dir.joinpath('code/modelbuilder/modelbuilder_config.ini'))
 
-walk_dir = '/code/modelbuilder/scripts/polder'
+walk_dir = work_dir.joinpath('code/modelbuilder/scripts/polder')
 
+windows = True
 
 def get_parser():
     """ Return argument parser. """
@@ -97,16 +104,29 @@ def execute_bash_file(file_path, polder_id, polder_name):
     file_name = file_path.split('/')[-1]
     f = open("/code/modelbuilder/logging_" + file_name + ".log", "w")
     subprocess.call(['bash',file_path,polder_id,polder_name], stdout=f)
-    
+ 
+#Define function for executing cmd files        
+def execute_cmd_file(file_path):
+    logging.info("START execute cmd file: {}".format(file_path))
+    file_path = Path(file_path)
+    cmd = file_path.as_posix()
+    log_file = work_dir.joinpath(f"code/datachecker/logging_{file_path.stem}.log")
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
+    log_file.write_text(p)   
+ 
 def execute_file(file_path, polder_id, polder_name):    
     if file_path.endswith('.sql'):
         #execute .sql file
         logging.debug('Executing .sql file')
         #result = execute_sql_file_multiple_transactions(file_path)
         result = execute_sql_file_multiple_transactions(file_path, polder_id, polder_name)
-    elif file_path.endswith('.sh'):
+    elif file_path.endswith('.sh') and not windows:
         logging.debug('Executing .sh file')
-        result = execute_bash_file(file_path, polder_id, polder_name)
+
+        result = execute_bash_file(file_path)
+    elif file_path.endswith('.cmd') and windows:
+        logging.debug('Executing .cmd file')
+        result = execute_cmd_file(file_path)
     
     else:
         logging.debug("File is no .sql or .sh file, don't know what to do with it, skipping")
