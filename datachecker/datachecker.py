@@ -23,9 +23,15 @@ import configparser
 if not Path("code").absolute().resolve().exists():
     os.chdir(Path(__file__).absolute().resolve().parents[2])
 
+windows = True
+debug = False
+if debug:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
 work_dir = Path.cwd()         
 #setup logging to write debug log to file
-logging.basicConfig(filename=work_dir.joinpath('code/datachecker/datachecker.log'),filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=logging.DEBUG)
+logging.basicConfig(filename=work_dir.joinpath('code/datachecker/datachecker.log'),filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=log_level)
 
 #Read configuration file
 config = configparser.ConfigParser()
@@ -33,8 +39,8 @@ config.read(work_dir.joinpath('code/datachecker/datachecker_config.ini'))
 
 walk_dir = work_dir.joinpath('code/datachecker/scripts/polder')
 
+run_file = work_dir.joinpath("code/datachecker/datachecker_running.txt")
 
-windows = True
 
 def get_parser():
     """ Return argument parser. """
@@ -53,7 +59,7 @@ def execute_sql_file_multiple_transactions(file_path):
     """Execute .sql file with one query per transaction (speeds up the queries)"""
 
     try:
-        db_conn = psycopg2.connect(host=config['db']['hostname'], dbname=config['db']['database'], user=config['db']['username'], password=config['db']['password'])
+        db_conn = psycopg2.connect(dbname=config['db']['database'], host=config['db']['hostname'], user=config['db']['username'], password=config['db']['password'], port=config['db']['port'])
         db_cur = db_conn.cursor()
     except psycopg2.OperationalError as e:
         logging.error("Could not connect to database with error: {}".format(e))
@@ -73,12 +79,15 @@ def execute_sql_file_multiple_transactions(file_path):
     try:
         #voer queries 1-voor-1 uit en commit
         for query in parsed_content:
+            if debug:
+                logging.debug("Query: {}".format(query))
             try:
                 db_cur.execute(str(query))
                 db_conn.commit()
             except psycopg2.Error as e:
-                logging.error("SQL error: {}".format(e))
-                logging.debug("Query: {}".format(query))
+                logging.error(f"SQL error: {e}")
+                if debug:
+                    raise e
         return 1
     
     except psycopg2.Error as e:
@@ -104,11 +113,11 @@ def execute_cmd_file(file_path):
     cmd = file_path.as_posix()
     log_file = work_dir.joinpath(f"code/datachecker/logging_{file_path.stem}.log")
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    log_file.write_text(p)
+    log_file.write_bytes(p)
 
 def create_database(db_name):
     logging.info("Creating database {}".format(db_name))
-    con = psycopg2.connect(dbname='postgres', host=config['db']['hostname'], user=config['db']['username'], password=config['db']['password'])
+    con = psycopg2.connect(dbname='postgres', host=config['db']['hostname'], user=config['db']['username'], password=config['db']['password'], port=config['db']['port'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
     
@@ -131,6 +140,7 @@ def datachecker(**kwargs):
 
     if(kwargs.get('file') is None):
         logging.info("Starting datachecker")
+        run_file.write_text("")
         create_database(config['db']['database'])
         
         script = 0
@@ -158,9 +168,9 @@ def datachecker(**kwargs):
                         logging.debug("File is no .sql or .sh file, don't know what to do with it, skipping")
         except psycopg2.Error as e:
             logging.error(e)
-        logging.info("Stopping datachecker")
-        if os.path.exists("/code/datachecker/datachecker_running.txt"):
-            os.remove("/code/datachecker/datachecker_running.txt")
+            logging.info("Stopping datachecker")
+        if run_file.is_file():
+            run_file.unlink()
         logging.info("Stopping datachecker")
         
     else:

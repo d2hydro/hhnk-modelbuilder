@@ -2,16 +2,23 @@ import os.path
 from time import sleep
 from flask import Flask, request
 app = Flask(__name__)
+import sys
+from pathlib import Path
 
+# set the work-dir so code-dir can be found
+if not Path("code").absolute().resolve().exists():
+    os.chdir(Path(__file__).absolute().resolve().parents[2])
+
+work_dir = Path.cwd()     
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
-    if os.path.isfile("/code/datachecker/datachecker_running.txt"):
+    if work_dir.joinpath("code/datachecker/datachecker_running.txt").is_file():
         datachecker_status = "running"
     else:
         datachecker_status = "not running"
     
-    if os.path.isfile("/code/modelbuilder/modelbuilder_running.txt"):
+    if work_dir.joinpath(r"code/modelbuilder/modelbuilder_running.txt").is_file():
         modelbuilder_status = "running"
     else:
         modelbuilder_status = "not running"
@@ -120,9 +127,9 @@ def index():
 
 @app.route("/datachecker/start/", methods=['GET', 'POST'])
 def datachecker_start():
-    with open('/code/datachecker/datachecker_running.txt', 'w') as fp: 
+    with open(work_dir.joinpath("code/datachecker/datachecker_running.txt"), 'w') as fp: 
         pass
-    os.system("python3 /code/datachecker/datachecker.py &")
+    os.system(f"{sys.executable} code/datachecker/datachecker.py &")
     return """<head>
         <meta http-equiv='refresh' content='5; URL=/'>
         </head>
@@ -136,9 +143,9 @@ def modelbuilder_start():
     if polder_id == '' or polder_name == '':
         return 'Fill in both a polder id and name'
     
-    with open('/code/modelbuilder/modelbuilder_running.txt', 'w') as fp: 
+    with open(work_dir.joinpath("code/modelbuilder/modelbuilder_running.txt"), 'w') as fp: 
         pass
-    os.system("python3 /code/modelbuilder/modelbuilder.py {} {} &".format(polder_id,polder_name))
+    os.system(f"{sys.executable} code/modelbuilder/modelbuilder.py {{}} {{}} &".format(polder_id,polder_name))
     return """<head>
             <meta http-equiv='refresh' content='5; URL=/'>
             </head>
@@ -147,7 +154,7 @@ def modelbuilder_start():
 @app.route('/datachecker/log')
 def stream_datachecker():
     def generate():
-        with open('/code/datachecker/datachecker.log') as f:
+        with open(work_dir.joinpath('code/datachecker/datachecker.log')) as f:
             yield f.read()
 
     return app.response_class(generate(), mimetype='text/plain')
@@ -156,7 +163,7 @@ def stream_datachecker():
 @app.route('/modelbuilder/log')
 def stream_modelbuilder():
     def generate():
-        with open('/code/modelbuilder/modelbuilder.log') as f:
+        with open(work_dir.joinpath('/code/modelbuilder/modelbuilder.log')) as f:
             yield f.read()
 
     return app.response_class(generate(), mimetype='text/plain')

@@ -22,10 +22,15 @@ import configparser
 if not Path("code").absolute().resolve().exists():
     os.chdir(Path(__file__).absolute().resolve().parents[2])
 
-work_dir = Path.cwd() 
-
+windows = True
+debug = True
+if debug:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+work_dir = Path.cwd()         
 #setup logging to write debug log to file
-logging.basicConfig(filename=work_dir.joinpath('code/modelbuilder/modelbuilder.log'),filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=logging.DEBUG)
+logging.basicConfig(filename=work_dir.joinpath('code/modelbuilder/modelbuilder.log'),filemode='w',format='%(asctime)s - %(levelname)s - %(message)s',level=log_level)
 
 #Read configuration file
 config = configparser.ConfigParser()
@@ -33,7 +38,7 @@ config.read(work_dir.joinpath('code/modelbuilder/modelbuilder_config.ini'))
 
 walk_dir = work_dir.joinpath('code/modelbuilder/scripts/polder')
 
-windows = True
+run_file = work_dir.joinpath("code/datachecker/modelbuilder_running.txt")
 
 def get_parser():
     """ Return argument parser. """
@@ -58,7 +63,7 @@ def execute_sql_file_multiple_transactions(file_path,polder_id, polder_name):
     """Execute .sql file with one query per transaction (speeds up the queries)"""
 
     try:
-        db_conn = psycopg2.connect(host=config['db']['hostname'], dbname=config['db']['database'], user=config['db']['username'], password=config['db']['password'])
+        db_conn = psycopg2.connect(dbname=config['db']['database'], host=config['db']['hostname'], user=config['db']['username'], password=config['db']['password'], port=config['db']['port'])
         db_cur = db_conn.cursor()
     except psycopg2.OperationalError as e:
         logging.error("Could not connect to database with error: {}".format(e))
@@ -79,14 +84,15 @@ def execute_sql_file_multiple_transactions(file_path,polder_id, polder_name):
     try:
         #voer queries 1-voor-1 uit en commit
         for query in parsed_content:
-            # print(str(query))
-            #print query.tokens
+            if debug:
+                logging.debug("Query: {}".format(query))
             try:
                 db_cur.execute(str(query))
                 db_conn.commit()
             except psycopg2.Error as e:
                 logging.error("SQL error: {}".format(e))
-                logging.debug("Query: {}".format(query))
+                if debug:
+                    raise e
         return 1
     
     except psycopg2.Error as e:
@@ -106,13 +112,13 @@ def execute_bash_file(file_path, polder_id, polder_name):
     subprocess.call(['bash',file_path,polder_id,polder_name], stdout=f)
  
 #Define function for executing cmd files        
-def execute_cmd_file(file_path):
+def execute_cmd_file(file_path, polder_id, polder_name):
     logging.info("START execute cmd file: {}".format(file_path))
     file_path = Path(file_path)
     cmd = file_path.as_posix()
     log_file = work_dir.joinpath(f"code/datachecker/logging_{file_path.stem}.log")
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout.read()
-    log_file.write_text(p)   
+    p = subprocess.Popen([cmd, polder_id, polder_name], stdout=subprocess.PIPE).stdout.read()
+    log_file.write_bytes(p)   
  
 def execute_file(file_path, polder_id, polder_name):    
     if file_path.endswith('.sql'):
@@ -126,14 +132,14 @@ def execute_file(file_path, polder_id, polder_name):
         result = execute_bash_file(file_path)
     elif file_path.endswith('.cmd') and windows:
         logging.debug('Executing .cmd file')
-        result = execute_cmd_file(file_path)
+        result = execute_cmd_file(file_path, polder_id, polder_name)
     
     else:
         logging.debug("File is no .sql or .sh file, don't know what to do with it, skipping")
 
 def create_database(db_name):
     logging.info("Creating database {}".format(db_name))
-    con = psycopg2.connect(dbname='postgres', host=config['db']['hostname'], user=config['db']['username'], password=config['db']['password'])
+    con = psycopg2.connect(dbname='postgres', host=config['db']['hostname'], user=config['db']['username'], password=config['db']['password'], port=config['db']['port'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
     
@@ -147,7 +153,7 @@ def create_database(db_name):
 
 def check_polder_contains_data(polder_id):
     try:
-        db_conn = psycopg2.connect(host=config['db']['hostname'], dbname=config['db']['database'], user=config['db']['username'], password=config['db']['password'])
+        db_conn = psycopg2.connect(host=config['db']['hostname'], dbname=config['db']['database'], user=config['db']['username'], password=config['db']['password'], port=config['db']['port'])
         db_cur = db_conn.cursor()
     except psycopg2.OperationalError as e:
         logging.error("Could not connect to database with error: {}".format(e))
@@ -182,11 +188,13 @@ def modelbuilder(**kwargs):
                         execute_file(file_path, polder_id, polder_name)
             except psycopg2.Error as e:
                 logging.error(e)
-                os.remove("/code/modelbuilder/modelbuilder_running.txt")
+                if run_file.is_file():
+                    run_file.unlink()
         else:
             logging.info("No channels found in polder, stopping the modelbuilder")
         logging.info("Stopping modelbuilder")
-        os.remove("/code/modelbuilder/modelbuilder_running.txt")
+        if run_file.is_file():
+            run_file.unlink()
     
     else:
         result = execute_file(file_path, polder_id, polder_name)
@@ -200,3 +208,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#modelbuilder(polder_id="45", polder_name="callantsoog")
