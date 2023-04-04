@@ -1,0 +1,23 @@
+site_name: HHNK 3Di Modelbuilder
+site_url: https://hhnk-git.github.io/hhnk-modelbuilder/
+theme:
+  name: "material"
+  language: en
+  logo: icons/hhnk_logo_white.png
+  favicon: icons/hhnk_logo.png
+  highlightjs: true
+  palette:
+    - scheme: hhnk
+extra_css:
+- stylesheets/extra.css
+
+plugins:
+  - search
+  - mkdocstrings
+  
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://hhnk-git.github.io/hhnk-modelbuilder
+nav:
+    - Home: index.md
