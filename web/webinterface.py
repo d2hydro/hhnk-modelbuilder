@@ -11,6 +11,19 @@ if not Path("code").absolute().resolve().exists():
 
 work_dir = Path.cwd()     
 
+
+def data_checker_running():
+    return work_dir.joinpath("code/datachecker/datachecker_running.txt").is_file()
+
+def model_builder_running():
+    return work_dir.joinpath(r"code/modelbuilder/modelbuilder_running.txt").is_file()
+
+def is_busy():
+    if data_checker_running() or model_builder_running():
+        return "busy"
+    else:
+        return"available"
+
 @app.route("/", methods=['GET', 'POST'])
 def index():
     if work_dir.joinpath("code/datachecker/datachecker_running.txt").is_file():
@@ -163,10 +176,15 @@ def stream_datachecker():
 @app.route('/modelbuilder/log')
 def stream_modelbuilder():
     def generate():
-        with open(work_dir.joinpath('/code/modelbuilder/modelbuilder.log')) as f:
+        with open(work_dir.joinpath('code/modelbuilder/modelbuilder.log')) as f:
             yield f.read()
 
     return app.response_class(generate(), mimetype='text/plain')
+
+
+@app.route('/status')
+def status():
+    return is_busy()
 
 if __name__ == "__main__":
     # Starts on port 5000 by default.
