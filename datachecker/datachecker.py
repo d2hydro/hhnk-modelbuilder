@@ -169,9 +169,9 @@ def datachecker(**kwargs):
         except psycopg2.Error as e:
             logging.error(e)
             logging.info("Stopping datachecker")
+        logging.info("Stopping datachecker")
         if run_file.is_file():
             run_file.unlink()
-        logging.info("Stopping datachecker")
         
     else:
         result = execute_sql_file_multiple_transactions(kwargs.get('file'))

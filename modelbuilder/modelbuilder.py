@@ -23,7 +23,7 @@ if not Path("code").absolute().resolve().exists():
     os.chdir(Path(__file__).absolute().resolve().parents[2])
 
 windows = True
-debug = True
+debug = False
 if debug:
     log_level = logging.DEBUG
 else:
@@ -38,7 +38,7 @@ config.read(work_dir.joinpath('code/modelbuilder/modelbuilder_config.ini'))
 
 walk_dir = work_dir.joinpath('code/modelbuilder/scripts/polder')
 
-run_file = work_dir.joinpath("code/datachecker/modelbuilder_running.txt")
+run_file = work_dir.joinpath("code/modelbuilder/modelbuilder_running.txt")
 
 def get_parser():
     """ Return argument parser. """
