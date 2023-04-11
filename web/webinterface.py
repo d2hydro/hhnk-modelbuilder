@@ -9,17 +9,19 @@ from pathlib import Path
 if not Path("code").absolute().resolve().exists():
     os.chdir(Path(__file__).absolute().resolve().parents[2])
 
-work_dir = Path.cwd()     
+work_dir = Path.cwd()
 
 
-def data_checker_running():
+def datachecker_running():
     return work_dir.joinpath("code/datachecker/datachecker_running.txt").is_file()
+
 
 def model_builder_running():
     return work_dir.joinpath(r"code/modelbuilder/modelbuilder_running.txt").is_file()
 
+
 def is_busy():
-    if data_checker_running() or model_builder_running():
+    if datachecker_running() or model_builder_running():
         return "busy"
     else:
         return"available"
@@ -172,7 +174,7 @@ def stream_datachecker():
 
     return app.response_class(generate(), mimetype='text/plain')
 
-    
+
 @app.route('/modelbuilder/log')
 def stream_modelbuilder():
     def generate():
@@ -186,6 +188,23 @@ def stream_modelbuilder():
 def status():
     return is_busy()
 
+
+@app.route("datachecker/status")
+def datachecker_status():
+    if datachecker_running():
+        return "busy"
+    else:
+        return "available"
+
+
+@app.route("modelbuilder/status")
+def modelbuilder_status():
+    if model_builder_running():
+        return "busy"
+    else:
+        return "available"
+
+
 if __name__ == "__main__":
     # Starts on port 5000 by default.
-    app.run(debug=True,host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0')
