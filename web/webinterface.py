@@ -161,7 +161,7 @@ def modelbuilder_start():
     
     with open(work_dir.joinpath("code/modelbuilder/modelbuilder_running.txt"), 'w') as fp: 
         pass
-    subprocess.Popen([f"{sys.executable}", f"code/modelbuilder/modelbuilder.py {polder_id} {polder_name}"])
+    subprocess.Popen([f"{sys.executable}", "code/modelbuilder/modelbuilder.py", "polder_id", "polder_name"])
     return """<head>
             <meta http-equiv='refresh' content='5; URL=/'>
             </head>
